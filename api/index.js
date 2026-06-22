@@ -9,15 +9,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3005;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-const DB_FILE = path.join(__dirname, 'database.json');
+// In Vercel serverless environments, database.json needs to be written to /tmp if writeable persistence is tried (though transient)
+const DB_FILE = path.join('/tmp', 'database.json');
 
-// Initialize database file if it doesn't exist
+// Initialize database file in /tmp if it doesn't exist
 function initDb() {
   if (!fs.existsSync(DB_FILE)) {
     const defaultData = {
@@ -156,6 +155,4 @@ app.get('/api/validate', (req, res) => {
   res.send(`--[[\n  License Validated Successfully under XD Key Manager\n]]\n${db.config.scriptContent}`);
 });
 
-app.listen(PORT, () => {
-  console.log(`[XD] Licensing server running at http://localhost:${PORT}`);
-});
+export default app;
