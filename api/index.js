@@ -13,16 +13,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const publicPath = path.join(__dirname, '..', 'public');
-app.use(express.static(publicPath));
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
-});
-
-app.get('/loader_template.lua', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'loader_template.lua'));
-});
 
 // In Vercel serverless environments, database.json needs to be written to /tmp if writeable persistence is tried (though transient)
 // Locally, use the current project directory for full persistent storage.
@@ -193,6 +183,17 @@ app.get('/api/validate', (req, res) => {
 
 // For local execution/debugging
 if (!IS_VERCEL) {
+  const publicPath = path.join(__dirname, '..', 'public');
+  app.use(express.static(publicPath));
+
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(publicPath, 'index.html'));
+  });
+
+  app.get('/loader_template.lua', (req, res) => {
+    res.sendFile(path.join(publicPath, 'loader_template.lua'));
+  });
+
   const PORT = process.env.PORT || 3005;
   app.listen(PORT, () => {
     console.log(`[XD] Local licensing server running at http://localhost:${PORT}`);
