@@ -6,119 +6,212 @@
   <title>XD // Premium DRM & Script Licensing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Ambient background glow effects -->
-  <div class="bg-glow bg-glow-purple"></div>
-  <div class="bg-glow bg-glow-blue"></div>
+  <!-- Ambient background glow elements -->
+  <div class="bg-glow bg-glow-primary"></div>
+  <div class="bg-glow bg-glow-secondary"></div>
 
-  <div class="app-container">
-    <header class="app-header">
-      <div class="logo-area">
-        <span class="logo-prefix">XD</span>
-        <span class="logo-suffix">DRM</span>
+  <div class="app-layout">
+    <!-- Sidebar navigation panel -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-glow">XD</span>
+        <span class="brand-suffix">DRM</span>
       </div>
-      <div class="status-indicator">
-        <span class="pulse-dot"></span>
-        <span class="status-text">Server Status: Active</span>
-      </div>
-    </header>
+      
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" data-tab="payload">
+          <span class="nav-icon">🔐</span>
+          <span class="nav-label">Payload Editor</span>
+        </button>
+        <button class="nav-item" data-tab="telemetry">
+          <span class="nav-icon">🛡️</span>
+          <span class="nav-label">Telemetry & Logs</span>
+        </button>
+        <button class="nav-item" data-tab="integration">
+          <span class="nav-icon">📦</span>
+          <span class="nav-label">Loader Integration</span>
+        </button>
+      </nav>
 
-    <main class="dashboard-grid">
-      <!-- Left column: Key Generator & Product Script configuration -->
-      <section class="left-panel">
-        <!-- Key Generation Card -->
-        <div class="card glass">
-          <div class="card-header">
-            <h2>Generate License Key</h2>
-            <p>Issue temporary or lifetime access tokens</p>
+      <div class="sidebar-footer">
+        <div class="system-status">
+          <span class="status-pulse"></span>
+          <div>
+            <div class="status-title">System Secure</div>
+            <div class="status-desc">XOR Obfuscation Active</div>
           </div>
-          <form id="generator-form">
-            <div class="form-group">
-              <label for="key-label">Key Label / Username</label>
-              <input type="text" id="key-label" placeholder="e.g. John Doe, Beta tester" required>
-            </div>
-            
-            <div class="form-group">
-              <label for="key-duration">Duration</label>
-              <select id="key-duration">
-                <option value="5">5 Minutes (Testing)</option>
-                <option value="60">1 Hour</option>
-                <option value="1440">1 Day</option>
-                <option value="10080">7 Days</option>
-                <option value="43200">30 Days</option>
-                <option value="forever" selected>Forever / Lifetime</option>
-              </select>
-            </div>
+        </div>
+      </div>
+    </aside>
 
-            <button type="submit" class="btn btn-primary">
-              <span class="btn-text">Generate Key</span>
-              <div class="btn-glow"></div>
+    <!-- Main content dashboard view -->
+    <main class="content-view">
+      <header class="content-header">
+        <div class="header-titles">
+          <h1 id="page-title">DRM Overview</h1>
+          <p id="page-desc">Monitor licenses, metrics, and manage target scripts.</p>
+        </div>
+        <div class="server-badge">
+          <span class="pulse-indicator"></span>
+          <span class="server-url-text" id="api-status-text">Server: Online</span>
+        </div>
+      </header>
+
+      <!-- TAB 1: DASHBOARD -->
+      <div class="tab-pane active" id="tab-dashboard">
+        <!-- Quick stats cards -->
+        <section class="stats-row">
+          <div class="stat-card card-glow-purple">
+            <div class="stat-icon">🔑</div>
+            <div class="stat-details">
+              <span class="stat-title">Issued Licenses</span>
+              <h3 id="stat-total-keys">0</h3>
+            </div>
+          </div>
+          <div class="stat-card card-glow-cyan">
+            <div class="stat-icon">🟢</div>
+            <div class="stat-details">
+              <span class="stat-title">Active Licenses</span>
+              <h3 id="stat-active-keys">0</h3>
+            </div>
+          </div>
+          <div class="stat-card card-glow-blue">
+            <div class="stat-icon">📶</div>
+            <div class="stat-details">
+              <span class="stat-title">Validations (Hits)</span>
+              <h3 id="stat-total-hits">0</h3>
+            </div>
+          </div>
+        </section>
+
+        <!-- Generation and Table area -->
+        <div class="dashboard-grid">
+          <!-- Generation Panel -->
+          <div class="card panel-card">
+            <div class="card-header">
+              <h2>Issue License Key</h2>
+              <p>Create time-bound or permanent validation keys</p>
+            </div>
+            <form id="generator-form">
+              <div class="form-group">
+                <label for="key-label">Client Name / Label</label>
+                <input type="text" id="key-label" placeholder="e.g. John Doe, VIP customer" required>
+              </div>
+              <div class="form-group">
+                <label for="key-duration">License Duration</label>
+                <select id="key-duration">
+                  <option value="5">5 Minutes (Debug testing)</option>
+                  <option value="60">1 Hour</option>
+                  <option value="1440">1 Day</option>
+                  <option value="10080">7 Days</option>
+                  <option value="43200">30 Days</option>
+                  <option value="forever" selected>Lifetime / Forever</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <span>Generate Key</span>
+                <span class="btn-shine"></span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Licenses List Panel -->
+          <div class="card panel-card card-large">
+            <div class="card-header">
+              <h2>License Registry</h2>
+              <p>Click a key code to load it into the integration template</p>
+            </div>
+            <div class="table-container">
+              <table class="premium-table">
+                <thead>
+                  <tr>
+                    <th>Client Label</th>
+                    <th>License Key</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="keys-table-body">
+                  <!-- JS generated entries -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: PAYLOAD EDITOR -->
+      <div class="tab-pane" id="tab-payload">
+        <div class="card panel-card">
+          <div class="card-header">
+            <h2>Lua Source Code Payload</h2>
+            <p>This script is encrypted dynamically using XOR bytecode ciphers on client check-in</p>
+          </div>
+          <div class="code-editor-container">
+            <div class="editor-gutter">
+              <!-- JS auto lines -->
+            </div>
+            <textarea id="script-content" placeholder="print('Hello from XD Obfuscator!')" spellcheck="false"></textarea>
+          </div>
+          <div class="editor-actions">
+            <button id="save-script-btn" class="btn btn-primary">
+              <span>Save & Compile Script</span>
+              <span class="btn-shine"></span>
             </button>
-          </form>
+          </div>
         </div>
+      </div>
 
-        <!-- Script payload management Card -->
-        <div class="card glass">
+      <!-- TAB 3: TELEMETRY -->
+      <div class="tab-pane" id="tab-telemetry">
+        <div class="card panel-card">
           <div class="card-header">
-            <h2>Target Script Content</h2>
-            <p>The code that executes once validation passes</p>
+            <h2>Validation Telemetry Logs</h2>
+            <p>Monitor real-time validate handshakes, requests, and IP connections</p>
           </div>
-          <div class="form-group">
-            <label for="script-content">Lua Code Payload</label>
-            <textarea id="script-content" placeholder="print('Running...')"></textarea>
-          </div>
-          <button id="save-script-btn" class="btn btn-secondary">
-            <span class="btn-text">Save Script Payload</span>
-          </button>
-        </div>
-      </section>
-
-      <!-- Right column: Keys list and Lua integration code -->
-      <section class="right-panel">
-        <!-- Keys Table Card -->
-        <div class="card glass card-large">
-          <div class="card-header">
-            <h2>Active Licenses</h2>
-            <p>Manage access keys and monitor check-ins</p>
-          </div>
-          
           <div class="table-container">
-            <table class="keys-table">
+            <table class="premium-table">
               <thead>
                 <tr>
-                  <th>Label</th>
-                  <th>Key</th>
-                  <th>Created</th>
-                  <th>Expires</th>
-                  <th>Status</th>
-                  <th>Last Check-In</th>
-                  <th style="text-align: right;">Actions</th>
+                  <th>Client Label</th>
+                  <th>License Key</th>
+                  <th>Last Used</th>
+                  <th>Registered IPs</th>
                 </tr>
               </thead>
-              <tbody id="keys-table-body">
-                <!-- Dynamically populated -->
+              <tbody id="telemetry-table-body">
+                <!-- JS populated -->
               </tbody>
             </table>
           </div>
         </div>
+      </div>
 
-        <!-- Loader copy Code block card -->
-        <div class="card glass">
+      <!-- TAB 4: INTEGRATION -->
+      <div class="tab-pane" id="tab-integration">
+        <div class="card panel-card">
           <div class="card-header flex-header">
             <div>
-              <h2>Client Loader Template</h2>
-              <p>Place this code inside your client-facing script</p>
+              <h2>Loader Configuration</h2>
+              <p>Place this loader block inside your script executor project</p>
             </div>
-            <button id="copy-loader-btn" class="btn btn-small">Copy Loader Code</button>
+            <button id="copy-loader-btn" class="btn btn-secondary">Copy Loader Script</button>
           </div>
-          <div class="code-block-wrapper">
-            <pre><code id="loader-code-display">-- Dynamically loaded template code</code></pre>
+          <div class="editor-code-container">
+            <pre><code id="loader-code-display">-- Loader snippet code loaded here</code></pre>
           </div>
         </div>
-      </section>
+      </div>
+
     </main>
   </div>
 

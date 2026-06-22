@@ -1,32 +1,90 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Elements
+  const navItems = document.querySelectorAll('.nav-item');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+  const pageTitle = document.getElementById('page-title');
+  const pageDesc = document.getElementById('page-desc');
+
   const keysTableBody = document.getElementById('keys-table-body');
+  const telemetryTableBody = document.getElementById('telemetry-table-body');
   const generatorForm = document.getElementById('generator-form');
   const keyLabelInput = document.getElementById('key-label');
   const keyDurationSelect = document.getElementById('key-duration');
+  
   const scriptContentTextarea = document.getElementById('script-content');
+  const editorGutter = document.querySelector('.editor-gutter');
   const saveScriptBtn = document.getElementById('save-script-btn');
+  
   const copyLoaderBtn = document.getElementById('copy-loader-btn');
   const loaderCodeDisplay = document.getElementById('loader-code-display');
 
+  // Stats Counters
+  const statTotalKeys = document.getElementById('stat-total-keys');
+  const statActiveKeys = document.getElementById('stat-active-keys');
+  const statTotalHits = document.getElementById('stat-total-hits');
+
   let selectedKeyForLoader = "XD-YOUR-KEY-HERE";
   let loaderTemplateRaw = "";
-
-  // Get base server URL (useful if deployed)
   const API_BASE = window.location.origin;
 
-  // Initialize and Fetch Initial Dashboard Data
+  // Page titles dictionary
+  const pageDetails = {
+    dashboard: { title: "DRM Overview", desc: "Monitor licenses, metrics, and manage target scripts." },
+    payload: { title: "Payload Compilation", desc: "Write product script payloads served to verified execution clients." },
+    telemetry: { title: "Validation Analytics", desc: "Real-time audit logs of validating license check-ins and client telemetry." },
+    integration: { title: "Integration Hub", desc: "Copy client loader script templates to link inside your project." }
+  };
+
+  // 1. Navigation Tab Switching
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const tabId = item.getAttribute('data-tab');
+      
+      // Update sidebar nav states
+      navItems.forEach(nav => nav.classList.remove('active'));
+      item.classList.add('active');
+
+      // Show/Hide Panes
+      tabPanes.forEach(pane => pane.classList.remove('active'));
+      const activePane = document.getElementById(`tab-${tabId}`);
+      if (activePane) activePane.classList.add('active');
+
+      // Update titles
+      const info = pageDetails[tabId];
+      if (info) {
+        pageTitle.textContent = info.title;
+        pageDesc.textContent = info.desc;
+      }
+    });
+  });
+
+  // 2. Editor Gutter Line Number Calculation
+  function updateEditorGutter() {
+    const lines = scriptContentTextarea.value.split('\n').length;
+    let gutterHTML = '';
+    for (let i = 1; i <= Math.max(lines, 1); i++) {
+      gutterHTML += `<span class="gutter-num">${i}</span>`;
+    }
+    editorGutter.innerHTML = gutterHTML;
+  }
+
+  scriptContentTextarea.addEventListener('input', updateEditorGutter);
+  scriptContentTextarea.addEventListener('scroll', () => {
+    editorGutter.scrollTop = scriptContentTextarea.scrollTop;
+  });
+
+  // 3. API Requests & Key Management
   fetchKeys();
   fetchScriptConfig();
   loadLoaderTemplate();
 
-  // Load the Raw Loader Template
+  // Load the Lua template snippet
   async function loadLoaderTemplate() {
     try {
       const response = await fetch('../loader_template.lua');
       if (response.ok) {
         loaderTemplateRaw = await response.text();
       } else {
-        // Fallback if file fetch fails
         loaderTemplateRaw = `-- [XD Loader Fallback]\nlocal LICENSE_KEY = "XD-YOUR-KEY-HERE"\nlocal SERVER_URL = "http://localhost:3005"\nif not game or not game.HttpGet then error("No HttpGet support") end\nloadstring(game:HttpGet(SERVER_URL .. "/api/validate?key=" .. LICENSE_KEY))()`;
       }
       updateLoaderCodeDisplay();
@@ -35,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Update visual code snippet for loader integration
   function updateLoaderCodeDisplay() {
     if (!loaderTemplateRaw) return;
     let code = loaderTemplateRaw;
@@ -44,53 +101,60 @@ document.addEventListener('DOMContentLoaded', () => {
     loaderCodeDisplay.textContent = code;
   }
 
-  // Retrieve keys list from backend
   async function fetchKeys() {
     try {
       const res = await fetch(`${API_BASE}/api/keys`);
       const keys = await res.json();
       renderKeys(keys);
+      renderTelemetry(keys);
+      calculateStats(keys);
     } catch (err) {
       console.error("Failed to load keys", err);
     }
   }
 
-  // Retrieve script configuration
   async function fetchScriptConfig() {
     try {
       const res = await fetch(`${API_BASE}/api/config`);
       const config = await res.json();
       scriptContentTextarea.value = config.scriptContent;
+      updateEditorGutter();
     } catch (err) {
-      console.error("Failed to load script configurations", err);
+      console.error("Failed to load script configs", err);
     }
   }
 
-  // Render list of keys in DOM table
+  // Calculate top bar metrics
+  function calculateStats(keys) {
+    let total = keys.length;
+    let active = keys.filter(k => k.isActive && (!k.expiresAt || Date.now() < k.expiresAt)).length;
+    let checkins = keys.reduce((acc, k) => acc + (k.lastUsed ? 1 : 0), 0); // basic tally of validated logs
+
+    statTotalKeys.textContent = total;
+    statActiveKeys.textContent = active;
+    statTotalHits.textContent = checkins;
+  }
+
+  // Render Table: Keys
   function renderKeys(keys) {
     keysTableBody.innerHTML = '';
     
     if (keys.length === 0) {
       keysTableBody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-            No licenses issued yet. Use the panel on the left to generate one.
+          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+            No active licenses found. Issue a key on the left to start.
           </td>
         </tr>
       `;
       return;
     }
 
-    // Sort: newest first
     keys.sort((a, b) => b.createdAt - a.createdAt);
 
     keys.forEach(k => {
       const tr = document.createElement('tr');
-      
-      const createdStr = new Date(k.createdAt).toLocaleDateString();
-      const expiresStr = k.expiresAt 
-        ? new Date(k.expiresAt).toLocaleString() 
-        : 'Forever';
+      const expiresStr = k.expiresAt ? new Date(k.expiresAt).toLocaleDateString() : 'Forever';
       
       let statusBadge = '<span class="badge badge-active">Active</span>';
       if (!k.isActive) {
@@ -99,21 +163,15 @@ document.addEventListener('DOMContentLoaded', () => {
         statusBadge = '<span class="badge badge-expired">Expired</span>';
       }
 
-      const lastUsedStr = k.lastUsed 
-        ? new Date(k.lastUsed).toLocaleTimeString() 
-        : 'Never';
-
       tr.innerHTML = `
         <td><strong>${escapeHtml(k.label)}</strong></td>
-        <td><span class="key-code clickable-key" title="Click to use in Loader snippet">${k.key}</span></td>
-        <td>${createdStr}</td>
+        <td><span class="key-code clickable-key" title="Select for Loader integration">${k.key}</span></td>
         <td>${expiresStr}</td>
         <td>${statusBadge}</td>
-        <td><span title="IP History: ${k.ipHistory.join(', ') || 'None'}">${lastUsedStr}</span></td>
         <td>
           <div class="actions-cell">
             <button class="btn-action-icon copy-key-btn" title="Copy Key">📋</button>
-            <button class="btn-action-icon toggle-key-btn ${k.isActive ? 'suspended' : 'active'}" title="${k.isActive ? 'Revoke' : 'Activate'}">
+            <button class="btn-action-icon toggle-key-btn" title="${k.isActive ? 'Suspend' : 'Activate'}">
               ${k.isActive ? '🛑' : '✅'}
             </button>
             <button class="btn-action-icon danger delete-key-btn" title="Delete Permanent">🗑️</button>
@@ -121,14 +179,14 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
       `;
 
-      // Click key to load it into loader code
+      // Select key for loader script
       tr.querySelector('.clickable-key').addEventListener('click', () => {
         selectedKeyForLoader = k.key;
         updateLoaderCodeDisplay();
-        showNotification(`Loader key set to: ${k.key}`);
+        showNotification(`Selected key loaded into loader snippet: ${k.key}`);
       });
 
-      // Action Handlers
+      // Actions
       tr.querySelector('.copy-key-btn').addEventListener('click', () => {
         navigator.clipboard.writeText(k.key);
         showNotification("Key copied to clipboard!");
@@ -139,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       tr.querySelector('.delete-key-btn').addEventListener('click', () => {
-        if (confirm("Are you sure you want to permanently delete this license?")) {
+        if (confirm("Are you sure you want to permanently delete this license key?")) {
           deleteKey(k.key);
         }
       });
@@ -148,7 +206,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Handle Form Submission - Key Generation
+  // Render Table: Telemetry logs
+  function renderTelemetry(keys) {
+    telemetryTableBody.innerHTML = '';
+    
+    // Filter out keys that have never checked in
+    const checkinKeys = keys.filter(k => k.lastUsed);
+
+    if (checkinKeys.length === 0) {
+      telemetryTableBody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+            No check-in telemetry recorded yet. Clients must execute their loader scripts first.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    checkinKeys.sort((a, b) => b.lastUsed - a.lastUsed);
+
+    checkinKeys.forEach(k => {
+      const tr = document.createElement('tr');
+      const lastUsedStr = new Date(k.lastUsed).toLocaleString();
+      const ipHistoryStr = k.ipHistory.join(', ') || 'N/A';
+
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(k.label)}</strong></td>
+        <td><span class="key-code">${k.key}</span></td>
+        <td>${lastUsedStr}</td>
+        <td><span class="key-code" title="${ipHistoryStr}">${k.ipHistory[k.ipHistory.length - 1] || 'Unknown'}</span></td>
+      `;
+      telemetryTableBody.appendChild(tr);
+    });
+  }
+
+  // Handle Form Submit: Generate License
   generatorForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const label = keyLabelInput.value.trim();
@@ -171,15 +264,15 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedKeyForLoader = data.key.key;
         await fetchKeys();
         updateLoaderCodeDisplay();
-        showNotification("License key generated successfully!");
+        showNotification("Key generated successfully!");
       }
     } catch (err) {
       console.error(err);
-      showNotification("Error generating key", true);
+      showNotification("Error generating license key", true);
     }
   });
 
-  // Save Script payload configuration
+  // Save Script Payload Content
   saveScriptBtn.addEventListener('click', async () => {
     const scriptContent = scriptContentTextarea.value;
     try {
@@ -190,21 +283,20 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const data = await response.json();
       if (data.success) {
-        showNotification("Target script payload saved successfully!");
+        showNotification("Script saved and encryption keys compiled!");
       }
     } catch (err) {
       console.error(err);
-      showNotification("Failed to save script content", true);
+      showNotification("Failed to save script payload", true);
     }
   });
 
-  // Copy loader code script
+  // Copy loader script
   copyLoaderBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(loaderCodeDisplay.textContent);
-    showNotification("Loader code copied successfully!");
+    showNotification("Loader code copied to clipboard!");
   });
 
-  // API Call - Suspend / Revoke key status
   async function toggleKeyStatus(key) {
     try {
       await fetch(`${API_BASE}/api/keys/revoke`, {
@@ -213,13 +305,12 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ key })
       });
       fetchKeys();
-      showNotification("Key state updated");
+      showNotification("License state updated");
     } catch (err) {
       console.error(err);
     }
   }
 
-  // API Call - Remove key entirely
   async function deleteKey(key) {
     try {
       await fetch(`${API_BASE}/api/keys/delete`, {
@@ -228,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ key })
       });
       fetchKeys();
-      showNotification("Key deleted");
+      showNotification("License key deleted permanent");
     } catch (err) {
       console.error(err);
     }
@@ -250,9 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
       position: 'fixed',
       bottom: '24px',
       right: '24px',
-      background: isError ? 'var(--error-color)' : 'linear-gradient(135deg, var(--accent-purple), var(--accent-blue))',
+      background: isError ? 'var(--color-error)' : 'linear-gradient(135deg, var(--accent-neon-purple), var(--accent-neon-blue))',
       color: '#fff',
-      padding: '0.8rem 1.6rem',
+      padding: '0.85rem 1.6rem',
       borderRadius: '8px',
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
       fontSize: '0.9rem',
@@ -263,13 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
       opacity: '0'
     });
 
-    // Animate in
     setTimeout(() => {
       notif.style.transform = 'translateY(0)';
       notif.style.opacity = '1';
     }, 50);
 
-    // Fade out and remove
     setTimeout(() => {
       notif.style.transform = 'translateY(20px)';
       notif.style.opacity = '0';

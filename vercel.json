@@ -6,18 +6,13 @@
       "use": "@vercel/node"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "api/index.js"
-    },
-    {
-      "src": "/loader_template.lua",
-      "dest": "loader_template.lua"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "public/$1"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/loader_template.lua", "destination": "/loader_template.lua" },
+    { "source": "/", "destination": "/public/index.html" },
+    { "source": "/index.html", "destination": "/public/index.html" },
+    { "source": "/style.css", "destination": "/public/style.css" },
+    { "source": "/app.js", "destination": "/public/app.js" },
+    { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
