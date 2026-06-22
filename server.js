@@ -1,0 +1,161 @@
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { v4 as uuidv4 } from 'uuid';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 3005;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+const DB_FILE = path.join(__dirname, 'database.json');
+
+// Initialize database file if it doesn't exist
+function initDb() {
+  if (!fs.existsSync(DB_FILE)) {
+    const defaultData = {
+      keys: [],
+      config: {
+        scriptContent: "print('Welcome to XD Licensed Script! Enjoy your execution.')\n-- Place your actual product script code here"
+      }
+    };
+    fs.writeFileSync(DB_FILE, JSON.stringify(defaultData, null, 2));
+  }
+}
+
+function readDb() {
+  initDb();
+  try {
+    const content = fs.readFileSync(DB_FILE, 'utf8');
+    return JSON.parse(content);
+  } catch (error) {
+    console.error("Error reading database file, using fallback empty values", error);
+    return { keys: [], config: { scriptContent: "" } };
+  }
+}
+
+function writeDb(data) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error("Error writing database file", error);
+  }
+}
+
+// REST APIs for Dashboard Management
+app.get('/api/keys', (req, res) => {
+  const db = readDb();
+  res.json(db.keys);
+});
+
+app.post('/api/keys/generate', (req, res) => {
+  const { durationMinutes, label } = req.body;
+  const db = readDb();
+  
+  const key = `XD-${uuidv4().replace(/-/g, '').substring(0, 16).toUpperCase()}`;
+  const createdAt = Date.now();
+  
+  let expiresAt = null; // null represents lifetime
+  if (durationMinutes && typeof durationMinutes === 'number' && durationMinutes > 0) {
+    expiresAt = createdAt + (durationMinutes * 60 * 1000);
+  }
+  
+  const newKey = {
+    key,
+    label: label || 'Unnamed Key',
+    createdAt,
+    expiresAt,
+    isActive: true,
+    lastUsed: null,
+    ipHistory: []
+  };
+  
+  db.keys.push(newKey);
+  writeDb(db);
+  
+  res.json({ success: true, key: newKey });
+});
+
+app.post('/api/keys/revoke', (req, res) => {
+  const { key } = req.body;
+  const db = readDb();
+  
+  const index = db.keys.findIndex(k => k.key === key);
+  if (index !== -1) {
+    db.keys[index].isActive = false;
+    writeDb(db);
+    return res.json({ success: true, message: "Key revoked successfully" });
+  }
+  
+  res.status(404).json({ success: false, error: "Key not found" });
+});
+
+app.post('/api/keys/delete', (req, res) => {
+  const { key } = req.body;
+  const db = readDb();
+  
+  db.keys = db.keys.filter(k => k.key !== key);
+  writeDb(db);
+  res.json({ success: true });
+});
+
+app.get('/api/config', (req, res) => {
+  const db = readDb();
+  res.json(db.config);
+});
+
+app.post('/api/config', (req, res) => {
+  const { scriptContent } = req.body;
+  const db = readDb();
+  
+  db.config.scriptContent = scriptContent || "";
+  writeDb(db);
+  
+  res.json({ success: true, config: db.config });
+});
+
+// REST API for Loader Verification (used by loadstrings in Lua)
+app.get('/api/validate', (req, res) => {
+  const keyParam = req.query.key;
+  if (!keyParam) {
+    return res.status(400).send('--[[\n  Error: Missing key parameter\n]]\nerror("XD Validation Error: Key is required.")');
+  }
+
+  const db = readDb();
+  const keyObj = db.keys.find(k => k.key === keyParam);
+
+  if (!keyObj) {
+    return res.status(403).send('--[[\n  Error: Invalid key\n]]\nerror("XD Validation Error: The provided key is invalid.")');
+  }
+
+  if (!keyObj.isActive) {
+    return res.status(403).send('--[[\n  Error: Revoked key\n]]\nerror("XD Validation Error: This key has been suspended or revoked.")');
+  }
+
+  // Expiration Check
+  if (keyObj.expiresAt !== null && Date.now() > keyObj.expiresAt) {
+    return res.status(403).send('--[[\n  Error: Expired key\n]]\nerror("XD Validation Error: This license key has expired.")');
+  }
+
+  // Update last used metrics
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown';
+  keyObj.lastUsed = Date.now();
+  if (!keyObj.ipHistory.includes(clientIp)) {
+    keyObj.ipHistory.push(clientIp);
+  }
+  writeDb(db);
+
+  // Return the main script for loadstring to run
+  res.send(`--[[\n  License Validated Successfully under XD Key Manager\n]]\n${db.config.scriptContent}`);
+});
+
+app.listen(PORT, () => {
+  console.log(`[XD] Licensing server running at http://localhost:${PORT}`);
+});

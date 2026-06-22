@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XD // Premium DRM & Script Licensing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient background glow effects -->
+  <div class="bg-glow bg-glow-purple"></div>
+  <div class="bg-glow bg-glow-blue"></div>
+
+  <div class="app-container">
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="logo-prefix">XD</span>
+        <span class="logo-suffix">DRM</span>
+      </div>
+      <div class="status-indicator">
+        <span class="pulse-dot"></span>
+        <span class="status-text">Server Status: Active</span>
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+      <!-- Left column: Key Generator & Product Script configuration -->
+      <section class="left-panel">
+        <!-- Key Generation Card -->
+        <div class="card glass">
+          <div class="card-header">
+            <h2>Generate License Key</h2>
+            <p>Issue temporary or lifetime access tokens</p>
+          </div>
+          <form id="generator-form">
+            <div class="form-group">
+              <label for="key-label">Key Label / Username</label>
+              <input type="text" id="key-label" placeholder="e.g. John Doe, Beta tester" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="key-duration">Duration</label>
+              <select id="key-duration">
+                <option value="5">5 Minutes (Testing)</option>
+                <option value="60">1 Hour</option>
+                <option value="1440">1 Day</option>
+                <option value="10080">7 Days</option>
+                <option value="43200">30 Days</option>
+                <option value="forever" selected>Forever / Lifetime</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">Generate Key</span>
+              <div class="btn-glow"></div>
+            </button>
+          </form>
+        </div>
+
+        <!-- Script payload management Card -->
+        <div class="card glass">
+          <div class="card-header">
+            <h2>Target Script Content</h2>
+            <p>The code that executes once validation passes</p>
+          </div>
+          <div class="form-group">
+            <label for="script-content">Lua Code Payload</label>
+            <textarea id="script-content" placeholder="print('Running...')"></textarea>
+          </div>
+          <button id="save-script-btn" class="btn btn-secondary">
+            <span class="btn-text">Save Script Payload</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Right column: Keys list and Lua integration code -->
+      <section class="right-panel">
+        <!-- Keys Table Card -->
+        <div class="card glass card-large">
+          <div class="card-header">
+            <h2>Active Licenses</h2>
+            <p>Manage access keys and monitor check-ins</p>
+          </div>
+          
+          <div class="table-container">
+            <table class="keys-table">
+              <thead>
+                <tr>
+                  <th>Label</th>
+                  <th>Key</th>
+                  <th>Created</th>
+                  <th>Expires</th>
+                  <th>Status</th>
+                  <th>Last Check-In</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="keys-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Loader copy Code block card -->
+        <div class="card glass">
+          <div class="card-header flex-header">
+            <div>
+              <h2>Client Loader Template</h2>
+              <p>Place this code inside your client-facing script</p>
+            </div>
+            <button id="copy-loader-btn" class="btn btn-small">Copy Loader Code</button>
+          </div>
+          <div class="code-block-wrapper">
+            <pre><code id="loader-code-display">-- Dynamically loaded template code</code></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
