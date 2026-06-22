@@ -2,11 +2,11 @@
   "name": "xd-licensing",
   "version": "1.0.0",
   "description": "XD Premium Script Licensing System",
-  "main": "server.js",
+  "main": "api/index.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node api/index.js",
+    "dev": "node api/index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

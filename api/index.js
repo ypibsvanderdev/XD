@@ -22,11 +22,30 @@ const DB_FILE = IS_VERCEL ? path.join('/tmp', 'database.json') : path.join(__dir
 // Initialize database file in /tmp if it doesn't exist
 function initDb() {
   if (!fs.existsSync(DB_FILE)) {
+    let novaContent = "print('Welcome to XD Licensed Script! Enjoy your execution.')\n-- Place your actual product script code here";
+    try {
+      const onedrivePath = 'c:/Users/meqda/OneDrive/Documents/hehehehe.txt';
+      if (fs.existsSync(onedrivePath)) {
+        novaContent = fs.readFileSync(onedrivePath, 'utf8');
+      }
+    } catch (err) {
+      console.error("Could not read local copy of hehehehe.txt during DB initialization", err);
+    }
+
     const defaultData = {
       keys: [],
-      config: {
-        scriptContent: "print('Welcome to XD Licensed Script! Enjoy your execution.')\n-- Place your actual product script code here"
-      }
+      scripts: [
+        {
+          id: "nova-flash-tp",
+          name: "Nova Flash TP",
+          content: novaContent
+        },
+        {
+          id: "default",
+          name: "Default Script",
+          content: "print('Welcome to XD Licensed Script! Enjoy your execution.')\n-- Place your actual product script code here"
+        }
+      ]
     };
     fs.writeFileSync(DB_FILE, JSON.stringify(defaultData, null, 2));
   }
@@ -36,10 +55,55 @@ function readDb() {
   initDb();
   try {
     const content = fs.readFileSync(DB_FILE, 'utf8');
-    return JSON.parse(content);
+    const db = JSON.parse(content);
+    let modified = false;
+
+    // Schema Migration
+    if (db.config && !db.scripts) {
+      db.scripts = [
+        {
+          id: "nova-flash-tp",
+          name: "Nova Flash TP",
+          content: db.config.scriptContent || ""
+        },
+        {
+          id: "default",
+          name: "Default Script",
+          content: "print('Welcome to XD Licensed Script! Enjoy your execution.')\n-- Place your actual product script code here"
+        }
+      ];
+      delete db.config;
+      modified = true;
+    }
+
+    if (!db.scripts) {
+      db.scripts = [
+        {
+          id: "default",
+          name: "Default Script",
+          content: "print('Welcome to XD Licensed Script! Enjoy your execution.')\n-- Place your actual product script code here"
+        }
+      ];
+      modified = true;
+    }
+
+    if (db.keys) {
+      db.keys.forEach(k => {
+        if (!k.scriptId) {
+          k.scriptId = "nova-flash-tp";
+          modified = true;
+        }
+      });
+    }
+
+    if (modified) {
+      writeDb(db);
+    }
+
+    return db;
   } catch (error) {
     console.error("Error reading database file, using fallback empty values", error);
-    return { keys: [], config: { scriptContent: "" } };
+    return { keys: [], scripts: [{ id: "default", name: "Default Script", content: "" }] };
   }
 }
 
@@ -58,7 +122,7 @@ app.get('/api/keys', (req, res) => {
 });
 
 app.post('/api/keys/generate', (req, res) => {
-  const { durationMinutes, label } = req.body;
+  const { durationMinutes, label, scriptId } = req.body;
   const db = readDb();
   
   const key = `XD-${uuidv4().replace(/-/g, '').substring(0, 16).toUpperCase()}`;
@@ -69,9 +133,16 @@ app.post('/api/keys/generate', (req, res) => {
     expiresAt = createdAt + (durationMinutes * 60 * 1000);
   }
   
+  // Resolve scriptId, default to first script if not found/provided
+  let resolvedScriptId = scriptId || "nova-flash-tp";
+  if (db.scripts && !db.scripts.some(s => s.id === resolvedScriptId)) {
+    resolvedScriptId = db.scripts[0] ? db.scripts[0].id : "default";
+  }
+  
   const newKey = {
     key,
     label: label || 'Unnamed Key',
+    scriptId: resolvedScriptId,
     createdAt,
     expiresAt,
     isActive: true,
@@ -110,17 +181,60 @@ app.post('/api/keys/delete', (req, res) => {
 
 app.get('/api/config', (req, res) => {
   const db = readDb();
-  res.json(db.config);
+  const nova = db.scripts.find(s => s.id === "nova-flash-tp") || db.scripts[0];
+  res.json({ scriptContent: nova ? nova.content : "" });
 });
 
 app.post('/api/config', (req, res) => {
   const { scriptContent } = req.body;
   const db = readDb();
-  
-  db.config.scriptContent = scriptContent || "";
+  const nova = db.scripts.find(s => s.id === "nova-flash-tp");
+  if (nova) {
+    nova.content = scriptContent || "";
+  } else {
+    db.scripts.push({ id: "nova-flash-tp", name: "Nova Flash TP", content: scriptContent || "" });
+  }
   writeDb(db);
+  res.json({ success: true, config: { scriptContent: scriptContent || "" } });
+});
+
+// New Script Management APIs
+app.get('/api/scripts', (req, res) => {
+  const db = readDb();
+  res.json(db.scripts || []);
+});
+
+app.post('/api/scripts', (req, res) => {
+  const { id, name, content } = req.body;
+  if (!id || !name) {
+    return res.status(400).json({ success: false, error: "Script ID and Name are required." });
+  }
+  const db = readDb();
+  if (!db.scripts) db.scripts = [];
   
-  res.json({ success: true, config: db.config });
+  const index = db.scripts.findIndex(s => s.id === id);
+  if (index !== -1) {
+    db.scripts[index].name = name;
+    db.scripts[index].content = content || "";
+  } else {
+    db.scripts.push({ id, name, content: content || "" });
+  }
+  writeDb(db);
+  res.json({ success: true, scripts: db.scripts });
+});
+
+app.post('/api/scripts/delete', (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ success: false, error: "Script ID is required." });
+  }
+  if (id === 'default' || id === 'nova-flash-tp') {
+    return res.status(400).json({ success: false, error: "Cannot delete core system scripts." });
+  }
+  const db = readDb();
+  db.scripts = db.scripts.filter(s => s.id !== id);
+  writeDb(db);
+  res.json({ success: true, scripts: db.scripts });
 });
 
 // Lightweight dynamic Lua obfuscator (XOR byte encoding wrapper)
@@ -177,7 +291,11 @@ app.get('/api/validate', (req, res) => {
   writeDb(db);
 
   // Return the dynamically obfuscated script for loadstring to execute
-  const protectedPayload = obfuscateLua(db.config.scriptContent);
+  const scriptId = keyObj.scriptId || "nova-flash-tp";
+  const targetScript = db.scripts.find(s => s.id === scriptId);
+  const scriptContent = targetScript ? targetScript.content : "print('Error: Target script not found for this license key.')";
+
+  const protectedPayload = obfuscateLua(scriptContent);
   res.send(protectedPayload);
 });
 

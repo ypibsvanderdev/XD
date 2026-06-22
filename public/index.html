@@ -106,6 +106,12 @@
                 <input type="text" id="key-label" placeholder="e.g. John Doe, VIP customer" required>
               </div>
               <div class="form-group">
+                <label for="key-script">Target Script</label>
+                <select id="key-script">
+                  <!-- Dynamically populated -->
+                </select>
+              </div>
+              <div class="form-group">
                 <label for="key-duration">License Duration</label>
                 <select id="key-duration">
                   <option value="5">5 Minutes (Debug testing)</option>
@@ -135,6 +141,7 @@
                   <tr>
                     <th>Client Label</th>
                     <th>License Key</th>
+                    <th>Script</th>
                     <th>Expires</th>
                     <th>Status</th>
                     <th style="text-align: right;">Actions</th>
@@ -156,6 +163,29 @@
             <h2>Lua Source Code Payload</h2>
             <p>This script is encrypted dynamically using XOR bytecode ciphers on client check-in</p>
           </div>
+
+          <div class="editor-selector-bar">
+            <div class="row-group">
+              <div class="selector-field">
+                <label for="payload-script-select">Selected Script</label>
+                <select id="payload-script-select">
+                  <!-- Dynamically populated -->
+                </select>
+              </div>
+              <div class="selector-field">
+                <label for="payload-script-name">Script Rename / Label</label>
+                <input type="text" id="payload-script-name" placeholder="e.g. Nova Flash TP">
+              </div>
+              <button id="delete-script-btn" class="btn btn-danger">Delete Script</button>
+            </div>
+
+            <div class="new-script-creator">
+              <input type="text" id="new-script-id" placeholder="new-script-id (slug, e.g. aim-bot)">
+              <input type="text" id="new-script-name" placeholder="New Script Display Name">
+              <button id="create-script-btn" class="btn btn-secondary">Create New Script</button>
+            </div>
+          </div>
+
           <div class="code-editor-container">
             <div class="editor-gutter">
               <!-- JS auto lines -->
@@ -184,6 +214,7 @@
                 <tr>
                   <th>Client Label</th>
                   <th>License Key</th>
+                  <th>Script</th>
                   <th>Last Used</th>
                   <th>Registered IPs</th>
                 </tr>

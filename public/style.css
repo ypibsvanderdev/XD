@@ -625,3 +625,55 @@ input[type="text"]:focus, select:focus, textarea:focus {
   justify-content: space-between;
   align-items: center;
 }
+
+/* Multi-script Payload Editor Layout Styles */
+.editor-selector-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding: 1.5rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  margin-top: 1.2rem;
+  margin-bottom: 1.2rem;
+}
+
+.row-group {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 1.2rem;
+  width: 100%;
+}
+
+.selector-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.new-script-creator {
+  display: flex;
+  gap: 0.8rem;
+  width: 100%;
+  border-top: 1px dashed var(--border-primary);
+  padding-top: 1.2rem;
+  margin-top: 0.4rem;
+  align-items: center;
+}
+
+.new-script-creator input {
+  flex: 1;
+}
+
+.btn-danger {
+  background-color: var(--color-error);
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+}
+
