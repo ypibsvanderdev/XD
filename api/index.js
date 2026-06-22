@@ -14,7 +14,9 @@ app.use(cors());
 app.use(express.json());
 
 // In Vercel serverless environments, database.json needs to be written to /tmp if writeable persistence is tried (though transient)
-const DB_FILE = path.join('/tmp', 'database.json');
+// Locally, use the current project directory for full persistent storage.
+const IS_VERCEL = process.env.VERCEL || process.env.NOW_BUILDER;
+const DB_FILE = IS_VERCEL ? path.join('/tmp', 'database.json') : path.join(__dirname, '..', 'database.json');
 
 // Initialize database file in /tmp if it doesn't exist
 function initDb() {
@@ -177,5 +179,13 @@ app.get('/api/validate', (req, res) => {
   const protectedPayload = obfuscateLua(db.config.scriptContent);
   res.send(protectedPayload);
 });
+
+// For local execution/debugging
+if (!IS_VERCEL) {
+  const PORT = process.env.PORT || 3005;
+  app.listen(PORT, () => {
+    console.log(`[XD] Local licensing server running at http://localhost:${PORT}`);
+  });
+}
 
 export default app;
