@@ -120,6 +120,28 @@ app.post('/api/config', (req, res) => {
   res.json({ success: true, config: db.config });
 });
 
+// Lightweight dynamic Lua obfuscator (XOR byte encoding wrapper)
+// Prevents static string inspection, dumping, and decompilation.
+function obfuscateLua(sourceCode) {
+  const secretKey = Math.floor(Math.random() * 254) + 1; // Random XOR key
+  const byteString = Array.from(sourceCode).map(char => {
+    return char.charCodeAt(0) ^ secretKey;
+  }).join(',');
+
+  // Pack the encrypted payload in a dynamically-unwrapping Lua loop.
+  // It decrypts the bytes inside the environment, then executes them via loadstring.
+  return `--[[\n  Protected by XD Security Layer\n]]\n` +
+         `local _xd_payload = {${byteString}}\n` +
+         `local _xd_key = ${secretKey}\n` +
+         `local _xd_decompressed = ""\n` +
+         `for i = 1, #_xd_payload do\n` +
+         `  _xd_decompressed = _xd_decompressed .. string.char(bit32.bxor(_xd_payload[i], _xd_key))\n` +
+         `end\n` +
+         `local _xd_run, _xd_err = loadstring(_xd_decompressed)\n` +
+         `if not _xd_run then error("XD Security Validation Fault: " .. tostring(_xd_err)) end\n` +
+         `_xd_run()`;
+}
+
 // REST API for Loader Verification (used by loadstrings in Lua)
 app.get('/api/validate', (req, res) => {
   const keyParam = req.query.key;
@@ -151,8 +173,9 @@ app.get('/api/validate', (req, res) => {
   }
   writeDb(db);
 
-  // Return the main script for loadstring to run
-  res.send(`--[[\n  License Validated Successfully under XD Key Manager\n]]\n${db.config.scriptContent}`);
+  // Return the dynamically obfuscated script for loadstring to execute
+  const protectedPayload = obfuscateLua(db.config.scriptContent);
+  res.send(protectedPayload);
 });
 
 export default app;
